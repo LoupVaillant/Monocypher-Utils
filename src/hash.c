@@ -58,7 +58,7 @@ int int_of_string(const char *s)
 
 static const char* usage_string = "TODO usage message\n";
 
-void usage(const char *error)
+void panic(const char *error)
 {
     fprintf(stderr, "%s\n%s", error, usage_string);
     exit(1);
@@ -77,11 +77,11 @@ int parse_algorithm(getopt_ctx *ctx)
 {
     const char *algorithm = getopt_parameter(ctx);
     if (algorithm == 0) {
-        usage("-a: unspecified algorithm");
+        panic("-a: unspecified algorithm");
     }
     if (strcmp(algorithm, "blake2b") == 0) { return BLAKE2B; }
     if (strcmp(algorithm, "sha512" ) == 0) { return SHA512;  }
-    usage("-a: algorithm must be blake2b or sha512");
+    panic("-a: algorithm must be blake2b or sha512");
     return -1; // impossible
 }
 
@@ -89,14 +89,14 @@ int parse_key(getopt_ctx *ctx, uint8_t key[64])
 {
     const char *key_str  = getopt_parameter(ctx);
     size_t      key_size = string_length(key_str);
-    if (key_str      ==  0) usage("--key: unspecified key"             );
-    if (key_size     > 128) usage("--key: key too long"                );
-    if (key_size % 2 !=  0) usage("--key: key has odd number of digits");
+    if (key_str      ==  0) panic("--key: unspecified key"             );
+    if (key_size     > 128) panic("--key: key too long"                );
+    if (key_size % 2 !=  0) panic("--key: key has odd number of digits");
     for (size_t i = 0; i < key_size; i += 2) {
         int msb = int_of_hex(key_str[i  ]);
         int lsb = int_of_hex(key_str[i+1]);
         if (msb == -1 || lsb == -1) {
-            usage("--key: key contains non-hex digits");
+            panic("--key: key contains non-hex digits");
         }
         key[i/2] = lsb + (msb << 4);
     }
@@ -107,13 +107,13 @@ size_t parse_digest_size(getopt_ctx *ctx)
 {
     const char *length = getopt_parameter(ctx);
     if (length == 0) {
-        usage("-l: missing digest size");
+        panic("-l: missing digest size");
     }
     int l = int_of_string(length);
-    if (l == -1         ) usage("-l: digest size must be a decimal integer."  );
-    if (l == -2         ) usage("-l: digest size out of range (8 - 512 bits)" );
-    if (l < 8 || l > 512) usage("-l: digest size out of range (8 - 512 bits)" );
-    if (l % 8 != 0      ) usage("-l: digest size must be a multiple of 8 bits");
+    if (l == -1         ) panic("-l: digest size must be a decimal integer."  );
+    if (l == -2         ) panic("-l: digest size out of range (8 - 512 bits)" );
+    if (l < 8 || l > 512) panic("-l: digest size out of range (8 - 512 bits)" );
+    if (l % 8 != 0      ) panic("-l: digest size must be a multiple of 8 bits");
     return (size_t)l / 8;
 }
 
@@ -203,8 +203,8 @@ int main(int argc, char* argv[])
         }
     }
     if (algorithm == SHA512) {
-        if (key_size    !=  0) usage("sha512 does not use secret keys");
-        if (digest_size != 64) usage("sha512 digests are 512 bits");
+        if (key_size    !=  0) panic("sha512 does not use secret keys");
+        if (digest_size != 64) panic("sha512 digests are 512 bits");
     }
 
     // parse input from stdin if no file is given

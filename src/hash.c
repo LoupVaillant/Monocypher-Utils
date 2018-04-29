@@ -64,6 +64,12 @@ void usage(const char *error)
     exit(1);
 }
 
+void help()
+{
+    printf("%s", usage_string);
+    exit(0);
+}
+
 static const int   BLAKE2B = 0;
 static const int   SHA512  = 1;
 
@@ -183,12 +189,12 @@ int main(int argc, char* argv[])
         case 'a': algorithm   = parse_algorithm  (&ctx     ); break;
         case 'l': digest_size = parse_digest_size(&ctx     ); break;
         case 'k': key_size    = parse_key        (&ctx, key); break;
-        case '?': printf("%s", usage_string);
+        case '?': help();
         case '-': {
             char *option = getopt_parameter(&ctx);
             if      (!strcmp(option, "tag" )) tag      = 1;
             else if (!strcmp(option, "key" )) key_size = parse_key(&ctx, key);
-            else if (!strcmp(option, "help")) printf("%s", usage_string);
+            else if (!strcmp(option, "help")) help();
         } break;
         default:
             fprintf(stderr, "Unknown option: -%c\n", opt);

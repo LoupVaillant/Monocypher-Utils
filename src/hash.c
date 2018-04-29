@@ -86,7 +86,6 @@ int parse_key(getopt_ctx *ctx, uint8_t key[64])
     if (key_str      ==  0) usage("--key: unspecified key"             );
     if (key_size     > 128) usage("--key: key too long"                );
     if (key_size % 2 !=  0) usage("--key: key has odd number of digits");
-    key_size /= 2;
     for (size_t i = 0; i < key_size; i += 2) {
         int msb = int_of_hex(key_str[i  ]);
         int lsb = int_of_hex(key_str[i+1]);
@@ -95,7 +94,7 @@ int parse_key(getopt_ctx *ctx, uint8_t key[64])
         }
         key[i/2] = lsb + (msb << 4);
     }
-    return key_size;
+    return key_size / 2;
 }
 
 size_t parse_digest_size(getopt_ctx *ctx)
@@ -198,7 +197,7 @@ int main(int argc, char* argv[])
         }
     }
     if (algorithm == SHA512) {
-        if (key_size    !=  0) usage("sha512 doesn't have a key"  );
+        if (key_size    !=  0) usage("sha512 does not use secret keys");
         if (digest_size != 64) usage("sha512 digests are 512 bits");
     }
 

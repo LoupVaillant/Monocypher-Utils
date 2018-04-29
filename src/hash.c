@@ -68,7 +68,6 @@ void usage(const char *error)
 
 static const int   BLAKE2B = 0;
 static const int   SHA512  = 1;
-static const char *algorithm_names[] = { "BLAKE2b", "SHA512" };
 
 int parse_algorithm(getopt_ctx *ctx)
 {
@@ -159,6 +158,7 @@ void hash_input(int algorithm, int tag, FILE *input, const char *file_name,
 
     // print
     if (tag) {
+        static const char *algorithm_names[] = { "BLAKE2b", "SHA512" };
         printf("%s (%s) = %s\n",
                algorithm_names[algorithm], file_name, digest_string);
     } else {

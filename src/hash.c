@@ -157,12 +157,15 @@ void hash_input(int algorithm, int tag, FILE *input, const char *file_name,
     }
 
     // print
-    if (tag) {
-        static const char *algorithm_names[] = { "BLAKE2b", "SHA512" };
-        printf("%s (%s) = %s\n",
-               algorithm_names[algorithm], file_name, digest_string);
-    } else {
+    if (!tag) {
         printf("%s %s\n", digest_string, file_name);
+    } else {
+        static const char *algorithm_names[] = { "BLAKE2b", "SHA512" };
+        printf("%s", algorithm_names[algorithm]);
+        if (digest_size != 64) {
+            printf("-%u", (unsigned)digest_size * 8);
+        }
+        printf(" (%s) = %s\n", file_name, digest_string);
     }
 }
 

@@ -56,14 +56,12 @@ int int_of_string(const char *s)
     return i;
 }
 
+static const char* usage_string = "TODO usage message\n";
+
 void usage(const char *error)
 {
-    int exit_code = error ? 1 : 0;
-    if (error) {
-        fprintf(stderr, "%s\n", error);
-    }
-    printf("TODO usage message\n");
-    exit(exit_code);
+    fprintf(stderr, "%s\n%s", error, usage_string);
+    exit(1);
 }
 
 static const int   BLAKE2B = 0;
@@ -186,14 +184,17 @@ int main(int argc, char* argv[])
         case 'a': algorithm   = parse_algorithm  (&ctx     ); break;
         case 'l': digest_size = parse_digest_size(&ctx     ); break;
         case 'k': key_size    = parse_key        (&ctx, key); break;
-        case '?': usage(0);
+        case '?': printf("%s", usage_string);
         case '-': {
             char *option = getopt_parameter(&ctx);
             if      (!strcmp(option, "tag" )) tag      = 1;
             else if (!strcmp(option, "key" )) key_size = parse_key(&ctx, key);
-            else if (!strcmp(option, "help")) usage(0);
+            else if (!strcmp(option, "help")) printf("%s", usage_string);
         } break;
-        default: usage("Unknown option");
+        default:
+            fprintf(stderr, "Unknown option: -%c\n", opt);
+            fprintf(stderr, "%s", usage_string);
+            exit(1);
         }
     }
     if (algorithm == SHA512) {

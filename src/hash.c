@@ -56,7 +56,17 @@ int int_of_string(const char *s)
     return i;
 }
 
-static const char* usage_string = "TODO usage message\n";
+static const char* usage_string =
+    "Usage: hash [OPTION]... [FILES]... \n"
+    "With no FILES, or when FILES is -, read standard input\n"
+    "\n"
+    "-a         blake2b or sha512 (blake2b by default)\n"
+    "-l         digest length (8-512 bits, 512 bits by default)\n"
+    "-k --key   secret key (in hexadecimal, no key by default)\n"
+    "   --tag   create a BSD-style checksum\n"
+    "-? --help  display this help and exit\n"
+    "\n"
+    ;
 
 void panic(const char *error)
 {

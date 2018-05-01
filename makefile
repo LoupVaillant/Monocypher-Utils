@@ -10,9 +10,9 @@ TARBALL_VERSION=master
 # avoids changing the current directory while we archive it
 TARBALL_DIR=..
 
-UTILS_H= src/monocypher.h src/sha512.h src/getopt.h
-UTILS_C= src/monocypher.c src/sha512.c src/getopt.c
-UTILS_O= lib/monocypher.o lib/sha512.o lib/getopt.o
+UTILS_H= src/monocypher.h src/sha512.h src/getopt.h src/utils.h
+UTILS_C= src/monocypher.c src/sha512.c src/getopt.c src/utils.c
+UTILS_O= lib/monocypher.o lib/sha512.o lib/getopt.o lib/utils.o
 
 EXEC_C= src/hash.c
 EXEC=   out/hash$(SUFFIX)
@@ -30,6 +30,7 @@ clean:
 lib/monocypher.o: src/monocypher.c src/monocypher.h
 lib/getopt.o    : src/getopt.c     src/getopt.h
 lib/sha512.o    : src/sha512.c     src/sha512.h
+lib/utils.o     : src/utils.c      src/utils.h
 $(UTILS_O):
 	@mkdir -p lib
 	$(CC) -c $(CFLAGS) -I src/ut $< -o $@

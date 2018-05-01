@@ -3,7 +3,6 @@
 #include "getopt.h"
 
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <errno.h>
@@ -41,6 +40,13 @@ size_t string_length(const char *s)
     return i;
 }
 
+int string_equal(const char *a, const char *b)
+{
+    if (a == 0 || b == 0) { return 0; }
+    while (*a == *b && *a == '\0' && *b == '\0') { a++; b++; }
+    return *a == *b;
+}
+
 int int_of_string(const char *s)
 {
     int i = 0;
@@ -60,13 +66,12 @@ static const char* usage_string =
     "Usage: hash [OPTION]... [FILES]... \n"
     "With no FILES, or when FILES is -, read standard input\n"
     "\n"
-    "-a         blake2b or sha512 (blake2b by default)\n"
-    "-l         digest length (8-512 bits, 512 bits by default)\n"
-    "-k --key   secret key (in hexadecimal, no key by default)\n"
-    "   --tag   create a BSD-style checksum\n"
-    "-? --help  display this help and exit\n"
-    "\n"
-    ;
+    "-a --algorithm      blake2b or sha512 (blake2b by default)\n"
+    "-l --digest-length  digest length (8-512 bits, 512 bits by default)\n"
+    "-k --key            secret key (in hexadecimal, no key by default)\n"
+    "-t --tag            create a BSD-style checksum\n"
+    "-? --help           display this help and exit\n"
+    "\n";
 
 void panic(const char *error)
 {
@@ -89,8 +94,8 @@ int parse_algorithm(getopt_ctx *ctx)
     if (algorithm == 0) {
         panic("-a: unspecified algorithm");
     }
-    if (strcmp(algorithm, "blake2b") == 0) { return BLAKE2B; }
-    if (strcmp(algorithm, "sha512" ) == 0) { return SHA512;  }
+    if (string_equal(algorithm, "blake2b")) { return BLAKE2B; }
+    if (string_equal(algorithm, "sha512" )) { return SHA512;  }
     panic("-a: algorithm must be blake2b or sha512");
     return -1; // impossible
 }
@@ -182,6 +187,10 @@ void hash_input(int algorithm, int tag, FILE *input, const char *file_name,
     }
 }
 
+// Puts a short and long option together
+#define OPT(s, l) if (opt == s ||                                       \
+                      (opt == '-' && string_equal(getopt_parameter(&ctx),l)))
+
 int main(int argc, char* argv[])
 {
     int     algorithm   = BLAKE2B;
@@ -195,18 +204,12 @@ int main(int argc, char* argv[])
     getopt_init(&ctx, argc, argv);
     int opt;
     while ((opt = getopt_next(&ctx)) != -1) {
-        switch (opt) {
-        case 'a': algorithm   = parse_algorithm  (&ctx     ); break;
-        case 'l': digest_size = parse_digest_size(&ctx     ); break;
-        case 'k': key_size    = parse_key        (&ctx, key); break;
-        case '?': help();
-        case '-': {
-            char *option = getopt_parameter(&ctx);
-            if      (!strcmp(option, "tag" )) tag      = 1;
-            else if (!strcmp(option, "key" )) key_size = parse_key(&ctx, key);
-            else if (!strcmp(option, "help")) help();
-        } break;
-        default:
+        OPT     ('t', "tag"        ) tag         = 1;
+        else OPT('a', "algorithm"  ) algorithm   = parse_algorithm  (&ctx     );
+        else OPT('l', "digest-size") digest_size = parse_digest_size(&ctx     );
+        else OPT('k', "key"        ) key_size    = parse_key        (&ctx, key);
+        else OPT('?', "help"       ) help();
+        else {
             fprintf(stderr, "Unknown option: -%c\n", opt);
             fprintf(stderr, "%s", usage_string);
             exit(1);

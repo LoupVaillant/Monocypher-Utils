@@ -12,11 +12,11 @@ static int parse_algorithm(getopt_ctx *ctx)
 {
     const char *algorithm = getopt_parameter(ctx);
     if (algorithm == 0) {
-        error("-a: unspecified algorithm");
+        error("unspecified algorithm");
     }
     if (string_equal(algorithm, "blake2b")) { return BLAKE2B; }
     if (string_equal(algorithm, "sha512" )) { return SHA512;  }
-    error("-a: algorithm must be blake2b or sha512");
+    error("algorithm must be blake2b or sha512");
     return -1; // impossible
 }
 
@@ -24,10 +24,10 @@ static int parse_key(getopt_ctx *ctx, uint8_t key[64])
 {
     int key_size = read_buffer(key, 64, getopt_parameter(ctx));
     switch (key_size) {
-    case -1: error("--key: unspecified key"             );
-    case -2: error("--key: key too long"                );
-    case -3: error("--key: key has odd number of digits");
-    case -4: error("--key: key contains non-hex digits" );
+    case -1: error("unspecified key"             );
+    case -2: error("key too long"                );
+    case -3: error("key has odd number of digits");
+    case -4: error("key contains non-hex digits" );
     default:;
     }
     return key_size;
@@ -37,15 +37,24 @@ static size_t parse_digest_size(getopt_ctx *ctx)
 {
     const char *length = getopt_parameter(ctx);
     if (length == 0) {
-        error("-l: missing digest size");
+        error("missing digest size");
     }
     int l = int_of_string(length);
-    if (l == -1         ) error("-l: digest size must be a decimal integer."  );
-    if (l == -2         ) error("-l: digest size out of range (8 - 512 bits)" );
-    if (l < 8 || l > 512) error("-l: digest size out of range (8 - 512 bits)" );
-    if (l % 8 != 0      ) error("-l: digest size must be a multiple of 8 bits");
+    if (l == -1         ) error("digest size must be a decimal integer."  );
+    if (l == -2         ) error("digest size out of range (8 - 512 bits)" );
+    if (l < 8 || l > 512) error("digest size out of range (8 - 512 bits)" );
+    if (l % 8 != 0      ) error("digest size must be a multiple of 8 bits");
     return (size_t)l / 8;
 }
+
+// generic hash update and final
+#define HASH(name)                                                      \
+    while (!feof(input) && !ferror(input)) {                            \
+        size_t nb_read = fread(block, 1, BLOCK_SIZE, input);            \
+        crypto_##name##_update(&name##_ctx, block, nb_read);            \
+    }                                                                   \
+    if (ferror(input)) { panic("An error occured while reading input"); } \
+    crypto_##name##_final(&name##_ctx, digest)
 
 void hash_input(int algorithm, int tag, FILE *input, const char *file_name,
                 size_t digest_size, const uint8_t *key, size_t key_size)
@@ -55,43 +64,28 @@ void hash_input(int algorithm, int tag, FILE *input, const char *file_name,
     if (algorithm == BLAKE2B) {
         crypto_blake2b_ctx blake2b_ctx;
         crypto_blake2b_general_init(&blake2b_ctx, digest_size, key, key_size);
-
-        while (!feof(input) && !ferror(input)) {
-            size_t nb_read = fread(block, 1, BLOCK_SIZE, input);
-            crypto_blake2b_update(&blake2b_ctx, block, nb_read);
-        }
-        if (ferror(input)) { panic("An error occured while reading input"); }
-        crypto_blake2b_final(&blake2b_ctx, digest);
+        HASH(blake2b);
     }
     if (algorithm == SHA512) {
         crypto_sha512_ctx  sha512_ctx;
         crypto_sha512_init(&sha512_ctx);
-
-        while (!feof(input) && !ferror(input)) {
-            size_t nb_read = fread(block, 1, BLOCK_SIZE, input);
-            crypto_sha512_update(&sha512_ctx , block, nb_read);
-        }
-        if (ferror(input)) { panic("An error occured while reading input"); }
-        crypto_sha512_final(&sha512_ctx , digest);
+        HASH(sha512);
     }
 
     if (!tag) {
         print_buffer(digest, digest_size);
         printf(" %s\n", file_name);
     } else {
-        static const char *algorithm_names[] = { "BLAKE2b", "SHA512" };
-        printf("%s", algorithm_names[algorithm]);
+        if (algorithm == BLAKE2B) printf("BLAKE2b");
+        if (algorithm == SHA512 ) printf("SHA512" );
         if (digest_size != 64) {
             printf("-%u", (unsigned)digest_size * 8);
         }
-        printf(" (%s) = \n", file_name);
+        printf(" (%s) = ", file_name);
         print_buffer(digest, digest_size);
+        printf("\n");
     }
 }
-
-// Puts a short and long option together
-#define OPT(s, l) if (opt == s ||                                       \
-                      (opt == '-' && string_equal(getopt_parameter(&ctx),l)))
 
 int main(int argc, char* argv[])
 {
@@ -102,28 +96,30 @@ int main(int argc, char* argv[])
     size_t  digest_size = 64;
 
     set_usage_string(
-        "Usage: hash [OPTION]... [FILES]... \n"
-        "With no FILES, or when FILES is -, read standard input\n"
+        "Usage: hash [OPTION]... [FILE]... \n"
+        "With no FILE, or when FILE is -, read standard input\n"
         "\n"
         "-a --algorithm      blake2b or sha512 (blake2b by default)\n"
         "-l --digest-length  digest length (8-512 bits, 512 bits by default)\n"
         "-k --key            secret key (in hexadecimal, no key by default)\n"
         "-t --tag            create a BSD-style checksum\n"
-        "-? --help           display this help and exit\n"
-        "\n");
+        "-? --help           display this help and exit\n");
 
     // Parse and validate arguments
     getopt_ctx ctx;
     getopt_init(&ctx, argc, argv);
     int opt;
     while ((opt = getopt_next(&ctx)) != -1) {
+        const char *long_opt = opt == '-' ? getopt_parameter(&ctx) : 0;
+#define OPT(s, l) if (opt == s || (opt == '-' && string_equal(long_opt, l)))
         OPT     ('t', "tag"        ) tag         = 1;
         else OPT('a', "algorithm"  ) algorithm   = parse_algorithm  (&ctx     );
         else OPT('l', "digest-size") digest_size = parse_digest_size(&ctx     );
         else OPT('k', "key"        ) key_size    = parse_key        (&ctx, key);
         else OPT('?', "help"       ) usage();
         else {
-            fprintf(stderr, "Unknown option: -%c", opt);
+            if (long_opt) fprintf(stderr, "Unknown option: --%s", long_opt);
+            else          fprintf(stderr, "Unknown option: -%c" , opt     );
             error("");
         }
     }

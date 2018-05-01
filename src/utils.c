@@ -33,7 +33,7 @@ static size_t string_length(const char *s)
 int string_equal(const char *a, const char *b)
 {
     if (a == 0 || b == 0) { return 0; }
-    while (*a == *b && *a == '\0' && *b == '\0') { a++; b++; }
+    while (*a == *b && *a != '\0' && *b != '\0') { a++; b++; }
     return *a == *b;
 }
 
@@ -55,7 +55,7 @@ int int_of_string(const char *s)
 void print_buffer(const uint8_t *buffer, size_t buffer_size)
 {
     for (size_t i = 0; i < buffer_size; i++) {
-        printf("%2x", buffer[i]);
+        printf("%02x", buffer[i]);
     }
 }
 
@@ -84,13 +84,13 @@ void set_usage_string(const char* usage)
 
 void usage()
 {
-    printf("%s\n", usage_string);
+    printf("%s\n\n", usage_string);
     exit(0);
 }
 
 void error(const char *error)
 {
-    fprintf(stderr, "%s\n%s", error, usage_string);
+    fprintf(stderr, "Usage error: %s\n\n%s\n", error, usage_string);
     exit(1);
 }
 void panic(const char *error)

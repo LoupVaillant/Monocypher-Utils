@@ -21,86 +21,84 @@ static const char* usage_string =
     "-? --help           display this help and exit\n"
     "\n";
 
-void panic(const char *error)
+static void error(const char *error)
 {
     fprintf(stderr, "%s\n%s", error, usage_string);
     exit(1);
 }
+static void panic(const char *error)
+{
+    perror(error);
+    exit(2);
+}
 
-int parse_algorithm(getopt_ctx *ctx)
+static int parse_algorithm(getopt_ctx *ctx)
 {
     const char *algorithm = getopt_parameter(ctx);
     if (algorithm == 0) {
-        panic("-a: unspecified algorithm");
+        error("-a: unspecified algorithm");
     }
     if (string_equal(algorithm, "blake2b")) { return BLAKE2B; }
     if (string_equal(algorithm, "sha512" )) { return SHA512;  }
-    panic("-a: algorithm must be blake2b or sha512");
+    error("-a: algorithm must be blake2b or sha512");
     return -1; // impossible
 }
 
-int parse_key(getopt_ctx *ctx, uint8_t key[64])
+static int parse_key(getopt_ctx *ctx, uint8_t key[64])
 {
     int key_size = read_buffer(key, 64, getopt_parameter(ctx));
     switch (key_size) {
-    case -1: panic("--key: unspecified key"             );
-    case -2: panic("--key: key too long"                );
-    case -3: panic("--key: key has odd number of digits");
-    case -4: panic("--key: key contains non-hex digits" );
+    case -1: error("--key: unspecified key"             );
+    case -2: error("--key: key too long"                );
+    case -3: error("--key: key has odd number of digits");
+    case -4: error("--key: key contains non-hex digits" );
     default:;
     }
     return key_size;
 }
 
-size_t parse_digest_size(getopt_ctx *ctx)
+static size_t parse_digest_size(getopt_ctx *ctx)
 {
     const char *length = getopt_parameter(ctx);
     if (length == 0) {
-        panic("-l: missing digest size");
+        error("-l: missing digest size");
     }
     int l = int_of_string(length);
-    if (l == -1         ) panic("-l: digest size must be a decimal integer."  );
-    if (l == -2         ) panic("-l: digest size out of range (8 - 512 bits)" );
-    if (l < 8 || l > 512) panic("-l: digest size out of range (8 - 512 bits)" );
-    if (l % 8 != 0      ) panic("-l: digest size must be a multiple of 8 bits");
+    if (l == -1         ) error("-l: digest size must be a decimal integer."  );
+    if (l == -2         ) error("-l: digest size out of range (8 - 512 bits)" );
+    if (l < 8 || l > 512) error("-l: digest size out of range (8 - 512 bits)" );
+    if (l % 8 != 0      ) error("-l: digest size must be a multiple of 8 bits");
     return (size_t)l / 8;
 }
 
 void hash_input(int algorithm, int tag, FILE *input, const char *file_name,
                 size_t digest_size, const uint8_t *key, size_t key_size)
 {
-    // init
-    crypto_blake2b_ctx blake2b_ctx;
-    crypto_sha512_ctx  sha512_ctx;
-    if (algorithm == BLAKE2B) {
-        crypto_blake2b_general_init(&blake2b_ctx, digest_size, key, key_size);
-    }
-    if (algorithm == SHA512) {
-        crypto_sha512_init(&sha512_ctx);
-    }
-
-    // update
+    uint8_t digest[64];
     uint8_t block[BLOCK_SIZE];
-    while (!feof(input) && !ferror(input)) {
-        size_t nb_read = fread(block, 1, BLOCK_SIZE, input);
-        if (algorithm == BLAKE2B) {
+    if (algorithm == BLAKE2B) {
+        crypto_blake2b_ctx blake2b_ctx;
+        crypto_blake2b_general_init(&blake2b_ctx, digest_size, key, key_size);
+
+        while (!feof(input) && !ferror(input)) {
+            size_t nb_read = fread(block, 1, BLOCK_SIZE, input);
             crypto_blake2b_update(&blake2b_ctx, block, nb_read);
         }
-        if (algorithm == SHA512 ) {
-            crypto_sha512_update (&sha512_ctx , block, nb_read);
+        if (ferror(input)) { panic("An error occured while reading input"); }
+        crypto_blake2b_final(&blake2b_ctx, digest);
+    }
+    if (algorithm == SHA512) {
+        crypto_sha512_ctx  sha512_ctx;
+        crypto_sha512_init(&sha512_ctx);
+
+        while (!feof(input) && !ferror(input)) {
+            size_t nb_read = fread(block, 1, BLOCK_SIZE, input);
+            crypto_sha512_update(&sha512_ctx , block, nb_read);
         }
-    }
-    if (ferror(input)) {
-        fprintf(stderr, "An error occured while reading input.\n");
-        exit(2);
+        if (ferror(input)) { panic("An error occured while reading input"); }
+        crypto_sha512_final(&sha512_ctx , digest);
     }
 
-    // final
-    uint8_t digest[64];
-    if (algorithm == BLAKE2B) { crypto_blake2b_final(&blake2b_ctx, digest); }
-    if (algorithm == SHA512 ) { crypto_sha512_final (&sha512_ctx , digest); }
-
-    // print
     if (!tag) {
         print_buffer(digest, digest_size);
         printf(" %s\n", file_name);
@@ -138,21 +136,19 @@ int main(int argc, char* argv[])
         else OPT('k', "key"        ) key_size    = parse_key        (&ctx, key);
         else OPT('?', "help"       ) { printf("%s", usage_string);  return 0; }
         else {
-            fprintf(stderr, "Unknown option: -%c\n", opt);
-            fprintf(stderr, "%s", usage_string);
-            exit(1);
+            fprintf(stderr, "Unknown option: -%c", opt);
+            error("");
         }
     }
     if (algorithm == SHA512) {
-        if (key_size    !=  0) panic("sha512 does not use secret keys");
-        if (digest_size != 64) panic("sha512 digests are 512 bits");
+        if (key_size    !=  0) error("sha512 does not use secret keys");
+        if (digest_size != 64) error("sha512 digests are 512 bits");
     }
 
     // parse input from stdin if no file is given
     if (ctx.argc == 0) {
         if(freopen(0, "rb", stdin) != stdin) {
-            perror("Could not reopen standard input in binary mode");
-            exit(2);
+            panic("Could not reopen standard input in binary mode");
         }
         hash_input(algorithm, tag, stdin, "-", digest_size, key, key_size);
     }
@@ -162,15 +158,13 @@ int main(int argc, char* argv[])
         FILE *input = fopen(ctx.argv[i], "rb");
         if (input == 0) {
             fprintf(stderr, "Could not open \"%s\": ", ctx.argv[i]);
-            perror(0);
-            exit(2);
+            panic(0);
         }
         hash_input(algorithm, tag, input, ctx.argv[i],
                    digest_size, key, key_size);
         if (fclose(input)) {
             fprintf(stderr, "Could not close \"%s\": ", ctx.argv[i]);
-            perror(0);
-            exit(2);
+            panic(0);
         }
     }
     return 0;

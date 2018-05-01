@@ -2,35 +2,11 @@
 #include "sha512.h"
 #include "getopt.h"
 #include "utils.h"
-
 #include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
 
-#define            BLOCK_SIZE     4096
-static const int   BLAKE2B      = 0;
-static const int   SHA512       = 1;
-static const char* usage_string =
-    "Usage: hash [OPTION]... [FILES]... \n"
-    "With no FILES, or when FILES is -, read standard input\n"
-    "\n"
-    "-a --algorithm      blake2b or sha512 (blake2b by default)\n"
-    "-l --digest-length  digest length (8-512 bits, 512 bits by default)\n"
-    "-k --key            secret key (in hexadecimal, no key by default)\n"
-    "-t --tag            create a BSD-style checksum\n"
-    "-? --help           display this help and exit\n"
-    "\n";
-
-static void error(const char *error)
-{
-    fprintf(stderr, "%s\n%s", error, usage_string);
-    exit(1);
-}
-static void panic(const char *error)
-{
-    perror(error);
-    exit(2);
-}
+#define          BLOCK_SIZE 4096
+static const int BLAKE2B = 0;
+static const int SHA512  = 1;
 
 static int parse_algorithm(getopt_ctx *ctx)
 {
@@ -125,6 +101,17 @@ int main(int argc, char* argv[])
     size_t  key_size    = 0;
     size_t  digest_size = 64;
 
+    set_usage_string(
+        "Usage: hash [OPTION]... [FILES]... \n"
+        "With no FILES, or when FILES is -, read standard input\n"
+        "\n"
+        "-a --algorithm      blake2b or sha512 (blake2b by default)\n"
+        "-l --digest-length  digest length (8-512 bits, 512 bits by default)\n"
+        "-k --key            secret key (in hexadecimal, no key by default)\n"
+        "-t --tag            create a BSD-style checksum\n"
+        "-? --help           display this help and exit\n"
+        "\n");
+
     // Parse and validate arguments
     getopt_ctx ctx;
     getopt_init(&ctx, argc, argv);
@@ -134,7 +121,7 @@ int main(int argc, char* argv[])
         else OPT('a', "algorithm"  ) algorithm   = parse_algorithm  (&ctx     );
         else OPT('l', "digest-size") digest_size = parse_digest_size(&ctx     );
         else OPT('k', "key"        ) key_size    = parse_key        (&ctx, key);
-        else OPT('?', "help"       ) { printf("%s", usage_string);  return 0; }
+        else OPT('?', "help"       ) usage();
         else {
             fprintf(stderr, "Unknown option: -%c", opt);
             error("");

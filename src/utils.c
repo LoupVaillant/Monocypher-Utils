@@ -1,6 +1,7 @@
 #include "utils.h"
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 static int is_between(char c, char start, char end)
 {
@@ -73,3 +74,28 @@ int read_buffer(uint8_t *out, size_t max_size, const char *hex)
     }
     return buf_size;
 }
+
+static const char *usage_string = "";
+
+void set_usage_string(const char* usage)
+{
+    usage_string = usage;
+}
+
+void usage()
+{
+    printf("%s\n", usage_string);
+    exit(0);
+}
+
+void error(const char *error)
+{
+    fprintf(stderr, "%s\n%s", error, usage_string);
+    exit(1);
+}
+void panic(const char *error)
+{
+    perror(error);
+    exit(2);
+}
+

@@ -27,3 +27,8 @@ void print_buffer(const uint8_t *buffer, size_t buffer_size);
 //   -3  : error, string has odd number of characters
 //   -4  : error, string has non-hex digits
 int read_buffer(uint8_t *out, size_t max_size, const char *hex);
+
+void set_usage_string(const char* usage); // sets usage string for user errors
+void usage();                  // Prints usage string and exits
+void error(const char *error); // Prints user    error, exits with code 1
+void panic(const char *error); // Prints runtime error, exits with code 2

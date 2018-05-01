@@ -27,11 +27,6 @@ int int_of_hex(char c)
         :  -1;
 }
 
-char hex_of_int(int i)
-{
-    return i < 10 ? '0' + i : 'a' + (i - 10);
-}
-
 size_t string_length(const char *s)
 {
     if (s == 0) { return -1u; }
@@ -62,6 +57,34 @@ int int_of_string(const char *s)
     return i;
 }
 
+void print_buffer(const uint8_t *buffer, size_t buffer_size)
+{
+    for (size_t i = 0; i < buffer_size; i++) {
+        printf("%2x", buffer[i]);
+    }
+}
+
+// Error codes
+// -1 null string
+// -2 string is too big
+// -3 string has odd number of characters
+// -4 string has non-hex digits
+int read_buffer(uint8_t *buffer, size_t max_size, const char *hex)
+{
+    size_t hex_size = string_length(hex);
+    size_t buf_size = hex_size / 2;
+    if (hex ==  0          ) return -1;
+    if (hex_size > max_size) return -2;
+    if (hex_size % 2 !=   0) return -3;
+    for (size_t i = 0; i < hex_size; i += 2) {
+        int msb = int_of_hex(hex[i  ]);
+        int lsb = int_of_hex(hex[i+1]);
+        if (msb == -1 || lsb == -1) return -4;
+        buffer[i/2] = lsb + (msb << 4);
+    }
+    return buf_size;
+}
+
 static const char* usage_string =
     "Usage: hash [OPTION]... [FILES]... \n"
     "With no FILES, or when FILES is -, read standard input\n"
@@ -79,14 +102,8 @@ void panic(const char *error)
     exit(1);
 }
 
-void help()
-{
-    printf("%s", usage_string);
-    exit(0);
-}
-
-static const int   BLAKE2B = 0;
-static const int   SHA512  = 1;
+static const int BLAKE2B = 0;
+static const int SHA512  = 1;
 
 int parse_algorithm(getopt_ctx *ctx)
 {
@@ -102,20 +119,15 @@ int parse_algorithm(getopt_ctx *ctx)
 
 int parse_key(getopt_ctx *ctx, uint8_t key[64])
 {
-    const char *key_str  = getopt_parameter(ctx);
-    size_t      key_size = string_length(key_str);
-    if (key_str      ==  0) panic("--key: unspecified key"             );
-    if (key_size     > 128) panic("--key: key too long"                );
-    if (key_size % 2 !=  0) panic("--key: key has odd number of digits");
-    for (size_t i = 0; i < key_size; i += 2) {
-        int msb = int_of_hex(key_str[i  ]);
-        int lsb = int_of_hex(key_str[i+1]);
-        if (msb == -1 || lsb == -1) {
-            panic("--key: key contains non-hex digits");
-        }
-        key[i/2] = lsb + (msb << 4);
+    int key_size = read_buffer(key, 64, getopt_parameter(ctx));
+    switch (key_size) {
+    case -1: panic("--key: unspecified key"             );
+    case -2: panic("--key: key too long"                );
+    case -3: panic("--key: key has odd number of digits");
+    case -4: panic("--key: key contains non-hex digits" );
+    default:;
     }
-    return key_size / 2;
+    return key_size;
 }
 
 size_t parse_digest_size(getopt_ctx *ctx)
@@ -166,24 +178,18 @@ void hash_input(int algorithm, int tag, FILE *input, const char *file_name,
     if (algorithm == BLAKE2B) { crypto_blake2b_final(&blake2b_ctx, digest); }
     if (algorithm == SHA512 ) { crypto_sha512_final (&sha512_ctx , digest); }
 
-    // to string
-    char digest_string[129];
-    digest_string[digest_size * 2] = '\0';
-    for (size_t i = 0; i < digest_size; i++) {
-        digest_string[i*2    ] = hex_of_int(digest[i] >> 4);  // msb
-        digest_string[i*2 + 1] = hex_of_int(digest[i] & 0xf); // lsb
-    }
-
     // print
     if (!tag) {
-        printf("%s %s\n", digest_string, file_name);
+        print_buffer(digest, digest_size);
+        printf(" %s\n", file_name);
     } else {
         static const char *algorithm_names[] = { "BLAKE2b", "SHA512" };
         printf("%s", algorithm_names[algorithm]);
         if (digest_size != 64) {
             printf("-%u", (unsigned)digest_size * 8);
         }
-        printf(" (%s) = %s\n", file_name, digest_string);
+        printf(" (%s) = \n", file_name);
+        print_buffer(digest, digest_size);
     }
 }
 
@@ -208,7 +214,7 @@ int main(int argc, char* argv[])
         else OPT('a', "algorithm"  ) algorithm   = parse_algorithm  (&ctx     );
         else OPT('l', "digest-size") digest_size = parse_digest_size(&ctx     );
         else OPT('k', "key"        ) key_size    = parse_key        (&ctx, key);
-        else OPT('?', "help"       ) help();
+        else OPT('?', "help"       ) { printf("%s", usage_string);  return 0; }
         else {
             fprintf(stderr, "Unknown option: -%c\n", opt);
             fprintf(stderr, "%s", usage_string);

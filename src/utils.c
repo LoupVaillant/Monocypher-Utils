@@ -30,6 +30,17 @@ static size_t string_length(const char *s)
     return i;
 }
 
+void* alloc(size_t size)
+{
+    if (size == 0) { return 0; } // for portability
+    void *buf = malloc(size);
+    if (buf == NULL) {
+        fprintf(stderr, "Failed to allocate 0x%zx bytes\n", size);
+        panic("Out of memory.");
+    }
+    return buf;
+}
+
 int string_equal(const char *a, const char *b)
 {
     if (a == 0 || b == 0) { return 0; }
@@ -73,6 +84,27 @@ int read_buffer(uint8_t *out, size_t max_size, const char *hex)
         out[i/2] = lsb + (msb << 4);
     }
     return buf_size;
+}
+
+int read_vector(vector *v, const char *hex)
+{
+    v->size   = string_length(hex) / 2;
+    v->buffer = alloc(v->size);
+    int error = read_buffer(v->buffer, INT_MAX, hex);
+    if (error < 1) {
+        free_vector(v);
+        return error;
+    }
+    return 0;
+}
+
+void free_vector(vector *v)
+{
+    if (v->buffer != 0) {
+        free(v->buffer);
+        v->buffer = 0;
+    }
+    v->size = 0;
 }
 
 static const char *usage_string = "";

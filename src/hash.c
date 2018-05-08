@@ -36,12 +36,10 @@ static int parse_key(getopt_ctx *ctx, uint8_t key[64])
 static size_t parse_digest_size(getopt_ctx *ctx)
 {
     const char *length = getopt_parameter(ctx);
-    if (length == 0) {
-        error("missing digest size");
-    }
     int l = int_of_string(length);
-    if (l == -1         ) error("digest size must be a decimal integer."  );
-    if (l == -2         ) error("digest size out of range (8 - 512 bits)" );
+    if (l == -1         ) error("missing digest size"                     );
+    if (l == -2         ) error("digest size must be a decimal integer."  );
+    if (l == -3         ) error("digest size out of range (8 - 512 bits)" );
     if (l < 8 || l > 512) error("digest size out of range (8 - 512 bits)" );
     if (l % 8 != 0      ) error("digest size must be a multiple of 8 bits");
     return (size_t)l / 8;

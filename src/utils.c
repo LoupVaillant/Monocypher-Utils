@@ -51,12 +51,11 @@ int string_equal(const char *a, const char *b)
 int int_of_string(const char *s)
 {
     int i = 0;
-    if (*s == '\0') {
-        return -1; // empty string
-    }
+    if ( s == 0   ) return -1; // NULL  string
+    if (*s == '\0') return -2; // empty string
     while (*s != 0) {
-        if (!is_between(*s, '0', '9')            ) return -1; // not a number
-        if (i > (INT_MAX - int_of_digit(*s)) / 10) return -2; // too big for int
+        if (!is_between(*s, '0', '9')            ) return -2; // not a number
+        if (i > (INT_MAX - int_of_digit(*s)) / 10) return -3; // too big for int
         i = (10 * i) + int_of_digit(*s);
         s++;
     }
@@ -84,6 +83,14 @@ int read_buffer(uint8_t *out, size_t max_size, const char *hex)
         out[i/2] = lsb + (msb << 4);
     }
     return buf_size;
+}
+
+vector new_vector()
+{
+    vector v;
+    v.buffer = 0;
+    v.size   = 0;
+    return v;
 }
 
 int read_vector(vector *v, const char *hex)

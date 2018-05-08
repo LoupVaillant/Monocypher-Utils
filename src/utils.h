@@ -14,8 +14,9 @@ int string_equal(const char *a, const char *b);
 //
 // Return values:
 //   >= 0: The value of the integer
-//   -1  : The string does not represent a positive integer
-//   -2  : The number is too big to be represented as an int
+//   -1  : The string is NULL
+//   -2  : The string does not represent a positive integer
+//   -3  : The number is too big to be represented as an int
 int int_of_string(const char *s);
 
 // Prints the contents of a buffer in hexadecimal form
@@ -35,6 +36,8 @@ typedef struct {
     uint8_t *buffer;
     size_t   size;
 } vector;
+
+vector new_vector();
 
 // Reads a hexadecimal representation of a byte buffer (allocates a vector)
 // Returns the same as read_buffer

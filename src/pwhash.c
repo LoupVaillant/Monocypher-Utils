@@ -7,24 +7,24 @@
 #define PASSWD_MAX_SIZE 4096
 
 static vector parse_key(getopt_ctx *ctx) {
-    vector v;
-    int code = read_vector(&v, getopt_parameter(ctx));
+    vector key;
+    int code = read_vector(&key, getopt_parameter(ctx));
     if (code == -1) error("unspecified key"             );
     if (code == -2) error("key too long"                );
     if (code == -3) error("key has odd number of digits");
     if (code == -4) error("key contains non-hex digits" );
-    return v;
+    return key;
 }
 
 static vector parse_ad (getopt_ctx *ctx)
 {
-    vector v;
-    int code = read_vector(&v, getopt_parameter(ctx));
+    vector ad;
+    int code = read_vector(&ad, getopt_parameter(ctx));
     if (code == -1) error("unspecified additional data"             );
     if (code == -2) error("additional data too long"                );
     if (code == -3) error("additional data has odd number of digits");
     if (code == -4) error("additional data contains non-hex digits" );
-    return v;
+    return ad;
 }
 
 static int parse_digest(getopt_ctx *ctx)

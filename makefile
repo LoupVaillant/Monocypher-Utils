@@ -14,8 +14,8 @@ UTILS_H= src/monocypher.h src/sha512.h src/getopt.h src/utils.h
 UTILS_C= src/monocypher.c src/sha512.c src/getopt.c src/utils.c
 UTILS_O= lib/monocypher.o lib/sha512.o lib/getopt.o lib/utils.o
 
-EXEC_C= src/hash.c
-EXEC=   out/hash$(SUFFIX)
+EXEC=   out/hash$(SUFFIX) \
+        out/pwhash$(SUFFIX)
 
 .PHONY: all install install-doc \
         check test              \
@@ -35,7 +35,8 @@ $(UTILS_O):
 	@mkdir -p lib
 	$(CC) -c $(CFLAGS) -I src/ut $< -o $@
 
-out/hash: src/hash.c $(UTILS_O)
+out/pwhash$(SUFFIX): src/pwhash.c $(UTILS_O)
+out/hash$(SUFFIX)  : src/hash.c   $(UTILS_O)
 $(EXEC):
 	@mkdir -p out
 	$(CC) $(CFLAGS) -I src/ut $^ -o $@

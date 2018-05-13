@@ -6,8 +6,6 @@
 #include <string.h>
 #include <bsd/readpassphrase.h>
 
-#define PASSWD_MAX_SIZE 4096
-
 static vector parse_key(getopt_ctx *ctx) {
     vector key;
     int code = read_vector(&key, getopt_parameter(ctx));
@@ -114,22 +112,21 @@ int main(int argc, char* argv[])
         }
     }
     vector   salt      = parse_salt(&ctx);
-    void    *work_area = alloc(1024 * nb_kibybytes);
+    size_t   work_size = 1024 * nb_kibybytes;
+    void    *work_area = alloc(work_size);
     uint8_t *digest    = alloc(digest_size);
-    uint8_t  password[PASSWD_MAX_SIZE];
 
     // read password
-    if (readpassphrase("Passphrase: ",
-                       (char*)password, sizeof(password), rpp_flags) == 0) {
+    if (readpassphrase("Passphrase: ", work_area, work_size, rpp_flags) == 0) {
         panic("Could not read password");
     }
-    size_t password_size = strlen((char*)password);
+    size_t password_size = strlen(work_area);
 
     // hash password
     crypto_argon2i_general(digest, digest_size,
                            work_area, nb_kibybytes,
                            nb_iterations,
-                           password   , password_size,
+                           work_area  , password_size,
                            salt.buffer, salt.size,
                            key .buffer, key .size,
                            ad  .buffer, ad  .size);

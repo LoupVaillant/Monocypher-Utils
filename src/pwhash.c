@@ -3,6 +3,8 @@
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <bsd/readpassphrase.h>
 
 #define PASSWD_MAX_SIZE 4096
 
@@ -76,6 +78,7 @@ int main(int argc, char* argv[])
     uint32_t nb_kibybytes  = 102400; // 100 Mib
     vector   key           = new_vector();
     vector   ad            = new_vector();
+    int      rpp_flags     = 0;
 
     set_usage_string(
         "Usage: pwhash [OPTION]... salt\n"
@@ -87,6 +90,7 @@ int main(int argc, char* argv[])
         "-m --nb-kilobytes     memory usage in KiB (default 100MiB)\n"
         "-k --key              secret key (hexadecimal, default none)\n"
         "-a --additional-data  additionnal data (hexadecimal, default none)\n"
+        "-i --stdin            read password from stdin"
         "-? --help             display this help and exit\n");
 
     // Parse and validate arguments
@@ -101,6 +105,7 @@ int main(int argc, char* argv[])
         else OPT('k', "nb-kilobytes"   ) nb_kibybytes  = parse_kib   (&ctx);
         else OPT('k', "key"            ) key           = parse_key   (&ctx);
         else OPT('a', "additional-data") ad            = parse_ad    (&ctx);
+        else OPT('i', "stdin"          ) rpp_flags    |= RPP_STDIN;
         else OPT('?', "help"           ) usage();
         else {
             if (long_opt) fprintf(stderr, "Unknown option: --%s", long_opt);
@@ -114,12 +119,11 @@ int main(int argc, char* argv[])
     uint8_t  password[PASSWD_MAX_SIZE];
 
     // read password
-    if(freopen(0, "rb", stdin) != stdin) {
-        panic("Could not reopen standard input in binary mode");
+    if (readpassphrase("Passphrase: ",
+                       (char*)password, sizeof(password), rpp_flags) == 0) {
+        panic("Could not read password");
     }
-    size_t password_size = fread(password, 1, PASSWD_MAX_SIZE, stdin);
-    if (!feof (stdin))  panic("Password too long");
-    if (ferror(stdin))  panic("An error uccured while reading the password");
+    size_t password_size = strlen((char*)password);
 
     // hash password
     crypto_argon2i_general(digest, digest_size,

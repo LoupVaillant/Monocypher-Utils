@@ -39,4 +39,4 @@ out/pwhash$(SUFFIX): src/pwhash.c $(UTILS_O)
 out/hash$(SUFFIX)  : src/hash.c   $(UTILS_O)
 $(EXEC):
 	@mkdir -p out
-	$(CC) $(CFLAGS) -I src/ut $^ -o $@
+	$(CC) $(CFLAGS) -I src/ut $^ -o $@ -lbsd

@@ -4,6 +4,10 @@
 // Allocate a buffer.  Panics if allocation fails
 void* alloc(size_t size);
 
+// Fill buffer with random bytes.
+// Panics if buffer_size > 256, or if the system call fails (it shouldn't).
+void random_bytes(uint8_t *buffer, size_t buffer_size);
+
 // Compares 2 strings
 //
 // Returns 1 if the strings are equal, 0 if they are different.

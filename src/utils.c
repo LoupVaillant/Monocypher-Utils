@@ -1,7 +1,10 @@
+#define _GNU_SOURCE // syscall(getrandom, ...)
 #include "utils.h"
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/syscall.h>
 
 static int is_between(char c, char start, char end)
 {
@@ -40,6 +43,18 @@ void* alloc(size_t size)
     }
     return buf;
 }
+
+void random_bytes(uint8_t *buffer, size_t buffer_size)
+{
+    if (buffer_size > 256 ) {
+        panic("Requested too many random bytes (<= 256)");
+    }
+    if (syscall(SYS_getrandom, buffer, buffer_size, 0) != (int)buffer_size) {
+        fprintf(stderr, "Failed to provide %zu random bytes", buffer_size);
+        panic("");
+    }
+}
+
 
 int string_equal(const char *a, const char *b)
 {

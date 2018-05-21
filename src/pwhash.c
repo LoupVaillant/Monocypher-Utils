@@ -93,24 +93,15 @@ int main(int argc, char* argv[])
 
     // Parse and validate arguments
     getopt_ctx ctx;
-    getopt_init(&ctx, argc, argv);
-    int opt;
-    while ((opt = getopt_next(&ctx)) != -1) {
-        const char *long_opt = opt == '-' ? getopt_parameter(&ctx) : 0;
-#define OPT(s, l) if (opt == s || (opt == '-' && string_equal(long_opt, l)))
-        OPT     ('l', "digest-size"    ) digest_size   = parse_digest(&ctx);
-        else OPT('t', "nb-iterations"  ) nb_iterations = parse_nb_it (&ctx);
-        else OPT('k', "nb-kilobytes"   ) nb_kibybytes  = parse_kib   (&ctx);
-        else OPT('k', "key"            ) key           = parse_key   (&ctx);
-        else OPT('a', "additional-data") ad            = parse_ad    (&ctx);
-        else OPT('i', "stdin"          ) rpp_flags    |= RPP_STDIN;
-        else OPT('?', "help"           ) usage();
-        else {
-            if (long_opt) fprintf(stderr, "Unknown option: --%s", long_opt);
-            else          fprintf(stderr, "Unknown option: -%c" , opt     );
-            error("");
-        }
-    }
+    OPT_BEGIN(ctx, argc, argv);
+    OPT('l', "digest-size"    );  digest_size   = parse_digest(&ctx);
+    OPT('t', "nb-iterations"  );  nb_iterations = parse_nb_it (&ctx);
+    OPT('k', "nb-kilobytes"   );  nb_kibybytes  = parse_kib   (&ctx);
+    OPT('k', "key"            );  key           = parse_key   (&ctx);
+    OPT('a', "additional-data");  ad            = parse_ad    (&ctx);
+    OPT('i', "stdin"          );  rpp_flags    |= RPP_STDIN;
+    OPT('?', "help"           );  usage();
+    OPT_END;
     vector   salt      = parse_salt(&ctx);
     size_t   work_size = 1024 * nb_kibybytes;
     void    *work_area = alloc(work_size);

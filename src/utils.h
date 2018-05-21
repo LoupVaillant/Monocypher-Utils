@@ -49,3 +49,29 @@ void set_usage_string(const char* usage); // sets usage string for user errors
 void usage();                  // Prints usage string and exits
 void error(const char *error); // Prints user    error, exits with code 1
 void panic(const char *error); // Prints runtime error, exits with code 2
+
+// Option parsing macros
+// Use thus:
+//     getopt_ctx ctx;
+//     OPT_BEGIN(ctx, argc, argv);
+//     OPT('f', "foo" );  process_foo();
+//     OPT('b', "bar" );  process_bar();
+//     OPT('?', "help");  usage();
+//     OPT_END;
+#define OPT_BEGIN(ctx, argc, argv) {                                    \
+        getopt_init(&ctx, argc, argv);                                  \
+        int _opt;                                                       \
+        while ((_opt = getopt_next(&ctx)) != -1) {                      \
+            const char *_long_opt = _opt == '-' ? getopt_parameter(&ctx) : 0; \
+            if (1) {} else { do {} while(0)
+
+#define OPT(s, l) continue; }                                           \
+            if (_opt == s || (_opt == '-' && string_equal(_long_opt, l))) { \
+                do {} while(0)
+
+#define OPT_END continue; }                                             \
+            if (_long_opt) fprintf(stderr, "Unknown option: --%s", _long_opt); \
+            else           fprintf(stderr, "Unknown option: -%c" , _opt     ); \
+            error("");                                                  \
+            }}                                                          \
+do {} while(0)

@@ -105,22 +105,13 @@ int main(int argc, char* argv[])
 
     // Parse and validate arguments
     getopt_ctx ctx;
-    getopt_init(&ctx, argc, argv);
-    int opt;
-    while ((opt = getopt_next(&ctx)) != -1) {
-        const char *long_opt = opt == '-' ? getopt_parameter(&ctx) : 0;
-#define OPT(s, l) if (opt == s || (opt == '-' && string_equal(long_opt, l)))
-        OPT     ('t', "tag"        ) tag         = 1;
-        else OPT('a', "algorithm"  ) algorithm   = parse_algorithm  (&ctx     );
-        else OPT('l', "digest-size") digest_size = parse_digest_size(&ctx     );
-        else OPT('k', "key"        ) key_size    = parse_key        (&ctx, key);
-        else OPT('?', "help"       ) usage();
-        else {
-            if (long_opt) fprintf(stderr, "Unknown option: --%s", long_opt);
-            else          fprintf(stderr, "Unknown option: -%c" , opt     );
-            error("");
-        }
-    }
+    OPT_BEGIN(ctx, argc, argv);
+    OPT('t', "tag"        );  tag         = 1;
+    OPT('a', "algorithm"  );  algorithm   = parse_algorithm  (&ctx     );
+    OPT('l', "digest-size");  digest_size = parse_digest_size(&ctx     );
+    OPT('k', "key"        );  key_size    = parse_key        (&ctx, key);
+    OPT('?', "help"       );  usage();
+    OPT_END;
     if (algorithm == SHA512) {
         if (key_size    !=  0) error("sha512 does not use secret keys");
         if (digest_size != 64) error("sha512 digests are 512 bits");
